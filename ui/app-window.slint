@@ -107,6 +107,7 @@ export component AppWindow inherits Window {
                                     }
 
                                     clicked => {
+                                        root.remove(index);
                                         if index == root.current_id {
                                             root.playing = false;
                                             root.current_id = -1;
@@ -115,8 +116,6 @@ export component AppWindow inherits Window {
                                                 root.current_id -= 1;
                                             }
                                         }
-                                        root.musics.remove(index);
-                                        root.remove(index);
                                     }
                                 }
                             }
