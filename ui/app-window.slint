@@ -2,8 +2,8 @@ import { Button, VerticalBox, HorizontalBox, ListView, Slider } from "std-widget
 
 export component AppWindow inherits Window {
     title: "ZMusicPlayer";
-    width: 600px;
-    height: 800px;
+    preferred-width: 600px;
+    preferred-height: 800px;
 
     in-out property <int> current_id: -1;
     in-out property <[string]> musics;
