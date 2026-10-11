@@ -1,0 +1,187 @@
+import { Button, VerticalBox, HorizontalBox, ListView, Slider } from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    title: "ZMusicPlayer";
+    width: 600px;
+    height: 800px;
+
+    in-out property <int> current_id: -1;
+    in-out property <[string]> musics;
+    in-out property <bool> playing;
+    in-out property <string> now: "00:00:00";
+    in-out property <string> end: "00:00:00";
+    in-out property <int> length: 10;
+    in-out property <int> slider_value: 0;
+
+    callback choose_file();
+    callback clear();
+    callback play_music(index: int);
+    callback clicked_play_button();
+    callback seek(value: int);
+    callback remove(index: int);
+
+    public function next() {
+        root.current_id += 1;
+        if root.current_id == root.musics.length {
+            root.current_id = 0;
+        }
+        play_music(root.current_id);
+    }
+
+    public function previous() {
+        root.current_id -= 1;
+        if root.current_id == -1 {
+            root.current_id = root.musics.length - 1;
+        }
+        play_music(root.current_id);
+    }
+
+    VerticalBox {
+        padding: 10px;
+
+        HorizontalBox {
+            spacing: 20px;
+
+            Button {
+                text: "选择文件";
+                clicked => {
+                    root.choose_file();
+                }
+            }
+
+            Button {
+                text: "清空";
+                clicked => {
+                    root.clear();
+                }
+            }
+        }
+
+        Rectangle {
+            border-color: #e0e0e0;
+            border-radius: 10px;
+            border-width: 1px;
+
+            ListView {
+                vertical-stretch: 1;
+
+                for music[index] in musics : Rectangle {
+                    VerticalBox {
+                        spacing: 5px;
+
+                        HorizontalBox {
+                            Rectangle {
+                                border-radius: 20px;
+                                background: index == root.current_id ? #b3e5fc : (touch.pressed ? #4fc3f7 : (touch.has-hover ? #b3e5fc : transparent));
+
+                                touch := TouchArea {
+                                    Text {
+                                        text: music;
+                                        color: index == root.current_id || touch.has-hover ? black : white;
+                                        font-size: 16px;
+                                        wrap: TextWrap.word-wrap;
+                                        horizontal-stretch: 1;
+                                        horizontal-alignment: center;
+                                    }
+
+                                    double-clicked => {
+                                        root.current_id = index;
+                                        root.playing = true;
+                                        root.play_music(index);
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                border-color: #e0e0e0;
+                                border-width: 1px;
+                                border-radius: 8px;
+                                min-width: 20px;
+
+                                TouchArea {
+                                    Text {
+                                        text: "-";
+                                    }
+
+                                    clicked => {
+                                        if index == root.current_id {
+                                            playing = false;
+                                            root.remove(index);
+                                        } else {
+                                            if root.current_id > index {
+                                                root.current_id -= 1;
+                                            }
+                                        }
+                                        root.musics.remove(index);
+                                    }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 1px;
+                            background: #e0e0e0;
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 10px;
+
+            Text {
+                text: now;
+            }
+
+            Slider {
+                minimum: 0;
+                maximum: length;
+                value: slider_value;
+                step: 0.2;
+
+                changed(value) => {
+                    if root.playing {
+                        root.seek(value);
+                    }
+                }
+            }
+
+            Text {
+                text: end;
+            }
+        }
+
+        HorizontalBox {
+            spacing: 10px;
+
+            Button {
+                text: "上一首";
+                clicked => {
+                    if root.musics.length > 0 {
+                        root.previous();
+                    }
+                }
+            }
+
+            Button {
+                text: root.playing ? "暂停" : "播放";
+                clicked => {
+                    if root.musics.length > 0 {
+                        root.playing = !root.playing;
+                        root.clicked_play_button();
+                    }
+                }
+            }
+
+            Button {
+                text: "下一首";
+                clicked => {
+                    if root.musics.length > 0 {
+                        root.next();
+                    }
+                }
+            }
+        }
+    }
+}
