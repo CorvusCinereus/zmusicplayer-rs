@@ -84,10 +84,14 @@ impl ZMusicPlayer {
 
                         let pos = player.get_pos().as_secs();
                         let _ = ui_.upgrade_in_event_loop(move |ui| {
-                            ui.set_slider_value(pos as i32);
-                            ui.set_now(format_duration(pos).to_shared_string());
+                            if !ui.get_dragging() {
+                                ui.set_slider_value(pos as f32);
+                                ui.set_now(format_duration(pos).to_shared_string());
+                            }
                         });
                     } else {
+                        player.stop();
+                        playing = false;
                         let _ = ui_.upgrade_in_event_loop(move |ui| {
                             ui.invoke_next();
                         });

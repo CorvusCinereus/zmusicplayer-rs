@@ -11,7 +11,8 @@ export component AppWindow inherits Window {
     in-out property <string> now: "00:00:00";
     in-out property <string> end: "00:00:00";
     in-out property <int> length: 10;
-    in-out property <int> slider_value: 0;
+    in-out property <float> slider_value: 0;
+    in-out property <bool> dragging: false;
 
     callback choose_file();
     callback clear();
@@ -25,6 +26,7 @@ export component AppWindow inherits Window {
         if root.current_id == root.musics.length {
             root.current_id = 0;
         }
+        root.slider_value = 0;
         play_music(root.current_id);
     }
 
@@ -33,6 +35,7 @@ export component AppWindow inherits Window {
         if root.current_id == -1 {
             root.current_id = root.musics.length - 1;
         }
+        root.slider_value = 0;
         play_music(root.current_id);
     }
 
@@ -138,13 +141,18 @@ export component AppWindow inherits Window {
             Slider {
                 minimum: 0;
                 maximum: length;
-                value: slider_value;
+                value <=> slider_value;
                 step: 0.2;
 
-                changed(value) => {
+                released(value) => {
                     if root.playing {
                         root.seek(value);
                     }
+                    root.dragging = false;
+                }
+
+                changed(value) => {
+                    root.dragging = true;
                 }
             }
 
