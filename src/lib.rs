@@ -197,8 +197,12 @@ impl ZMusicPlayer {
 
     fn bind_remove(&self) -> &Self {
         let state = self.state.clone();
+        let ui = self.ui.as_weak();
         self.ui.on_remove(move |index| {
-            let _ = state.borrow().tx.send(MusicMessage::Stop);
+            let ui = ui.unwrap();
+            if ui.get_current_id() == index {
+                let _ = state.borrow().tx.send(MusicMessage::Stop);
+            }
             state.borrow_mut().music_paths.remove(index as usize);
             state.borrow_mut().musics.remove(index as usize);
         });
