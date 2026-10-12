@@ -58,13 +58,13 @@ fn App() -> Element {
         move || {
             if current_index() > -2 {
                 if current_index() < 0 {
-                    current_index.set(musics.read().borrow().len() as i32 - 1);
-                } else if current_index() as usize == musics.read().borrow().len() {
+                    current_index.set(musics.peek().borrow().len() as i32 - 1);
+                } else if current_index() as usize == musics.peek().borrow().len() {
                     current_index.set(0);
                 }
 
                 let _ = tx.send(MusicMessage::Play(
-                    musics.read().borrow()[current_index() as usize].clone(),
+                    musics.peek().borrow()[current_index() as usize].clone(),
                 ));
             }
         }
@@ -129,11 +129,10 @@ fn App() -> Element {
             div { class: "list_view",
                 for (index , item) in musics.read().borrow().iter().enumerate() {
                     div {
-                        label {
-                            class: if index == current_index() as usize { "playing_item" } else { "item_label" },
-                            ondoubleclick: move |_| {
-                                current_index.set(index as i32);
-                            },
+                        ondoubleclick: move |_| {
+                            current_index.set(index as i32);
+                        },
+                        label { class: if index == current_index() as usize { "playing_item" } else { "item_label" },
                             {item.file_name()}
                         }
                         button {
