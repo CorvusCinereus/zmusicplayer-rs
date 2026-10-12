@@ -98,7 +98,8 @@ fn App() -> Element {
                 button {
                     class: "max_button",
                     onclick: move |_| {
-                        use_window().set_maximized(true);
+                        let window = use_window();
+                        window.set_maximized(!window.is_maximized());
                     },
                     "◻"
                 }
@@ -179,7 +180,9 @@ fn App() -> Element {
                 button {
                     class: "previous_button",
                     onclick: move |_| {
-                        *current_index.write() -= 1;
+                        if musics.read().borrow().len() > 0 {
+                            *current_index.write() -= 1;
+                        }
                     },
                     "◂"
                 }
@@ -200,7 +203,9 @@ fn App() -> Element {
                 button {
                     class: "next_button",
                     onclick: move |_| {
-                        *current_index.write() += 1;
+                        if musics.read().borrow().len() > 0 {
+                            *current_index.write() += 1;
+                        }
                     },
                     "▸"
                 }
