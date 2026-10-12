@@ -1,0 +1,7 @@
+[application]
+name = "ZMusicPlayer"
+
+[bundle]
+identifier = "com.corvuscinereus.zmusicplayer"
+publisher = "CorvusCinereus"
+copyright = "Copyright (c) 2026 CorvusCinereus, licensed under Apache-2.0"
