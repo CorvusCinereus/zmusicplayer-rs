@@ -74,8 +74,12 @@ export component AppWindow inherits Window {
 
                         HorizontalBox {
                             Rectangle {
-                                border-radius: 20px;
+                                border-radius: 15px;
+                                min-height: 30px;
                                 background: index == root.current_id ? #b3e5fc : (touch.pressed ? #4fc3f7 : (touch.has-hover ? #b3e5fc : transparent));
+                                animate background {
+                                     duration: 250ms;
+                                }
 
                                 touch := TouchArea {
                                     Text {
@@ -96,14 +100,31 @@ export component AppWindow inherits Window {
                             }
 
                             Rectangle {
-                                border-color: #e0e0e0;
-                                border-width: 1px;
-                                border-radius: 8px;
-                                min-width: 20px;
+                                width: 28px;
+                                height: 28px;
+                                border-radius: 14px;
+                                background: delete-touch.pressed ? #e53935
+                                        : delete-touch.has-hover ? #ffebee
+                                        : transparent;
+                                animate background {
+                                    duration: 150ms;
+                                }
 
-                                TouchArea {
+                                delete-touch := TouchArea {
+                                    // mouse-cursor: pointer;
+
                                     Text {
-                                        text: "-";
+                                        text: "✕";
+                                        font-size: 15px;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                        // 三态图标颜色
+                                        color: delete-touch.pressed ? white
+                                            : delete-touch.has-hover ? #e53935
+                                            : #9e9e9e;
+                                        animate color {
+                                            duration: 150ms;
+                                        }
                                     }
 
                                     clicked => {
