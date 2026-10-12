@@ -18,7 +18,7 @@ pub fn music_backend(
     let handle = rodio::DeviceSinkBuilder::open_default_sink()?;
     let player = rodio::Player::connect_new(&handle.mixer());
 
-    loop {
+    'main_loop: loop {
         if playing() {
             std::thread::sleep(Duration::from_secs_f32(0.2));
 
@@ -60,6 +60,10 @@ pub fn music_backend(
                         playing.set(true);
                     }
                 }
+                Ok(MusicMessage::Quit) => {
+                    player.clear();
+                    break 'main_loop;
+                }
                 _ => {}
             }
 
@@ -92,10 +96,15 @@ pub fn music_backend(
                         playing.set(true);
                     }
                 }
+                Ok(MusicMessage::Quit) => {
+                    break 'main_loop;
+                }
                 _ => {}
             }
         }
     }
+
+    Ok(())
 }
 
 fn format_duration(d: u64) -> String {

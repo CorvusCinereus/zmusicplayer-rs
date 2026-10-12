@@ -1,8 +1,7 @@
 use std::{cell::RefCell, sync::Arc};
 
 use dioxus::{
-    desktop::{Config, WindowBuilder, use_window},
-    prelude::*,
+    desktop::{Config, WindowBuilder, WindowEvent, tao::event::Event, use_window, use_wry_event_handler}, prelude::*,
 };
 use zmusicplayer::{MusicMessage, music::music_backend};
 
@@ -71,6 +70,18 @@ fn App() -> Element {
         }
     });
 
+    use_wry_event_handler({
+        let tx = tx.clone();
+        move |event, _| {
+            if let Event::WindowEvent {
+                event: WindowEvent::CloseRequested {..},
+                ..
+            } = event {
+                let _ = tx.send(MusicMessage::Quit);
+            }
+        }
+    });
+
     rsx! {
         Stylesheet { href: CSS }
 
@@ -107,7 +118,7 @@ fn App() -> Element {
                         let tx = tx.clone();
                         move |_| {
                             musics.write().borrow_mut().clear();
-                            current_index.set(-1);
+                            current_index.set(-2);
                             let _ = tx.send(MusicMessage::Stop);
                         }
                     },

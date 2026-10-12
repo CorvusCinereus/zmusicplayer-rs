@@ -5,5 +5,6 @@ pub enum MusicMessage {
     Pause,
     Continue,
     Stop,
-    Seek
+    Seek,
+    Quit
 }
