@@ -1,7 +1,9 @@
+use dioxus::html::FileData;
+
 pub mod music;
 
 pub enum MusicMessage {
-    Play(rfd::FileHandle),
+    Play(FileData),
     Pause,
     Continue,
     Stop,

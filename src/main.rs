@@ -1,16 +1,26 @@
-use std::{cell::RefCell, sync::Arc};
-
-use dioxus::{
-    desktop::{Config, WindowBuilder, WindowEvent, tao::event::Event, use_window, use_wry_event_handler}, prelude::*,
+use std::{
+    cell::RefCell,
+    sync::{Arc, mpsc::Sender},
 };
+
+use dioxus::prelude::*;
 use zmusicplayer::{MusicMessage, music::music_backend};
 
-const CSS: Asset = asset!("/assets/fluent.css");
+const CSS: Asset = asset!("/assets/md3.css");
+static mut TX: Option<Arc<Sender<MusicMessage>>> = None;
 
 fn main() {
-    dioxus::LaunchBuilder::desktop()
-        .with_cfg(Config::new().with_window(WindowBuilder::new().with_decorations(false)))
+    dioxus::LaunchBuilder::new()
+        .with_cfg(desktop!(
+            use dioxus::desktop::{Config, WindowBuilder};
+            Config::new().with_window(WindowBuilder::new().with_decorations(false))
+        ))
         .launch(App);
+    unsafe {
+        if let Some(Some(tx)) = (&raw const TX).as_ref() {
+            let _ = tx.send(MusicMessage::Quit);
+        }
+    }
 }
 
 #[component]
@@ -22,18 +32,8 @@ fn App() -> Element {
     let end = use_signal_sync(|| "00:00:00".to_string());
     let length = use_signal_sync(|| 10);
     let mut current_index = use_signal_sync(|| -2);
-    let mut musics = use_signal(|| Arc::new(RefCell::new(vec![])));
-
-    let choose_file = move |_| async move {
-        let files = rfd::AsyncFileDialog::new()
-            .add_filter("musics", &["mp3", "wav", "flac", "ogg"])
-            .pick_files()
-            .await;
-        musics
-            .write()
-            .borrow_mut()
-            .append(&mut files.unwrap_or(vec![]));
-    };
+    let mut musics: Signal<Arc<RefCell<Vec<dioxus_elements::FileData>>>> =
+        use_signal(|| Arc::new(RefCell::new(vec![])));
 
     let tx = use_hook(|| {
         let (tx, rx) = std::sync::mpsc::channel();
@@ -49,6 +49,12 @@ fn App() -> Element {
                 current_index,
             );
         });
+
+        let tx = Arc::new(tx);
+
+        unsafe {
+            TX = Some(tx.clone());
+        }
 
         tx
     });
@@ -70,49 +76,21 @@ fn App() -> Element {
         }
     });
 
-    use_wry_event_handler({
-        let tx = tx.clone();
-        move |event, _| {
-            if let Event::WindowEvent {
-                event: WindowEvent::CloseRequested {..},
-                ..
-            } = event {
-                let _ = tx.send(MusicMessage::Quit);
-            }
-        }
-    });
-
     rsx! {
         Stylesheet { href: CSS }
 
         div { class: "main",
-            div { class: "decoration",
-                label { class: "title", "ZMusicPlayer" }
-                button {
-                    class: "min_button",
-                    onclick: move |_| {
-                        use_window().set_minimized(true);
-                    },
-                    "-"
-                }
-                button {
-                    class: "max_button",
-                    onclick: move |_| {
-                        let window = use_window();
-                        window.set_maximized(!window.is_maximized());
-                    },
-                    "◻"
-                }
-                button {
-                    class: "close_button",
-                    onclick: move |_| {
-                        use_window().close();
-                    },
-                    "☓"
-                }
-            }
+            my_decorations {}
             div { class: "appbar",
-                button { class: "file_button", onclick: choose_file, "选择文件" }
+                input {
+                    class: "file_input",
+                    r#type: "file",
+                    accept: "music/*.mp3,*.wav,*.flac",
+                    multiple: true,
+                    onchange: move |evt| async move {
+                        musics.write().borrow_mut().append(&mut evt.files());
+                    },
+                }
                 button {
                     class: "clear_button",
                     onclick: {
@@ -133,7 +111,7 @@ fn App() -> Element {
                             current_index.set(index as i32);
                         },
                         label { class: if index == current_index() as usize { "playing_item" } else { "item_label" },
-                            {item.file_name()}
+                            {item.name()}
                         }
                         button {
                             class: "delete_item",
@@ -183,7 +161,7 @@ fn App() -> Element {
                             *current_index.write() -= 1;
                         }
                     },
-                    "◂"
+                    "⏮"
                 }
                 button {
                     class: if playing() { "play_button playing" } else { "play_button" },
@@ -197,7 +175,7 @@ fn App() -> Element {
                             }
                         }
                     },
-                    {if playing() { "॥" } else { "▸" }}
+                    {if playing() { "⏸" } else { "▶" }}
                 }
                 button {
                     class: "next_button",
@@ -206,9 +184,50 @@ fn App() -> Element {
                             *current_index.write() += 1;
                         }
                     },
-                    "▸"
+                    "⏭"
                 }
             }
         }
+    }
+}
+
+#[cfg(feature = "desktop")]
+#[component]
+fn my_decorations() -> Element {
+    use dioxus::desktop::use_window;
+    rsx! {
+        div { class: "decoration",
+            label { class: "title", "ZMusicPlayer" }
+            button {
+                class: "min_button",
+                onclick: move |_| {
+                    use_window().set_minimized(true);
+                },
+                "−"
+            }
+            button {
+                class: "max_button",
+                onclick: move |_| {
+                    let window = use_window();
+                    window.set_maximized(!window.is_maximized());
+                },
+                "□"
+            }
+            button {
+                class: "close_button",
+                onclick: move |_| {
+                    use_window().close();
+                },
+                "✕"
+            }
+        }
+    }
+}
+
+#[cfg(not(feature = "desktop"))]
+#[component]
+fn my_decorations() -> Element {
+    rsx! {
+        Title { "ZMusicPlayer" }
     }
 }

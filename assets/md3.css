@@ -1,0 +1,651 @@
+/* ============================================================
+   ZMusicPlayer · Material Design 3 (Material You)
+   ============================================================ */
+
+/* ---------- 设计令牌 ---------- */
+:root {
+  color-scheme: light;
+
+  /* Primary */
+  --primary:              #6750A4;
+  --on-primary:           #FFFFFF;
+  --primary-container:    #EADDFF;
+  --on-primary-container: #21005D;
+
+  /* Secondary */
+  --secondary:              #625B71;
+  --on-secondary:           #FFFFFF;
+  --secondary-container:    #E8DEF8;
+  --on-secondary-container: #1D192B;
+
+  /* Tertiary */
+  --tertiary:              #7D5260;
+  --on-tertiary:           #FFFFFF;
+  --tertiary-container:    #FFD8E4;
+  --on-tertiary-container: #31111D;
+
+  /* Error */
+  --error:              #B3261E;
+  --on-error:           #FFFFFF;
+  --error-container:    #F9DEDC;
+  --on-error-container: #410E0B;
+
+  /* Surface */
+  --background:                #FEF7FF;
+  --on-background:             #1D1B20;
+  --surface:                   #FEF7FF;
+  --on-surface:                #1D1B20;
+  --surface-variant:           #E7E0EC;
+  --on-surface-variant:        #49454F;
+  --surface-container-lowest:  #FFFFFF;
+  --surface-container-low:     #F7F2FA;
+  --surface-container:         #F3EDF7;
+  --surface-container-high:    #ECE6F0;
+  --surface-container-highest: #E6E0E9;
+
+  /* Outline */
+  --outline:         #79747E;
+  --outline-variant: #CAC4D0;
+
+  /* 状态层（基于 on-surface 的叠色） */
+  --state-hover:   rgba(0, 0, 0, 0.08);
+  --state-focus:   rgba(0, 0, 0, 0.12);
+  --state-pressed: rgba(0, 0, 0, 0.12);
+
+  /* Shape */
+  --shape-xs:   4px;
+  --shape-sm:   8px;
+  --shape-md:   12px;
+  --shape-lg:   16px;
+  --shape-xl:   28px;
+  --shape-full: 9999px;
+
+  /* Motion */
+  --ease-standard:   cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --dur-short:       150ms;
+  --dur-medium:      250ms;
+
+  /* Elevation */
+  --elevation-0: none;
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --elevation-2: 0 1px 2px rgba(0, 0, 0, 0.30), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --elevation-3: 0 1px 3px rgba(0, 0, 0, 0.30), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* ---------- 暗色主题 ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --primary:              #D0BCFF;
+    --on-primary:           #381E72;
+    --primary-container:    #4F378B;
+    --on-primary-container: #EADDFF;
+
+    --secondary:              #CCC2DC;
+    --on-secondary:           #332D41;
+    --secondary-container:    #4A4458;
+    --on-secondary-container: #E8DEF8;
+
+    --tertiary:              #EFB8C8;
+    --on-tertiary:           #492532;
+    --tertiary-container:    #633B48;
+    --on-tertiary-container: #FFD8E4;
+
+    --error:              #F2B8B5;
+    --on-error:           #601410;
+    --error-container:    #8C1D18;
+    --on-error-container: #F9DEDC;
+
+    --background:                #141218;
+    --on-background:             #E6E0E9;
+    --surface:                   #141218;
+    --on-surface:                #E6E0E9;
+    --surface-variant:           #49454F;
+    --on-surface-variant:        #CAC4D0;
+    --surface-container-lowest:  #0F0D13;
+    --surface-container-low:     #1D1B20;
+    --surface-container:         #211F26;
+    --surface-container-high:    #2B2930;
+    --surface-container-highest: #36343B;
+
+    --outline:         #938F99;
+    --outline-variant: #49454F;
+
+    --state-hover:   rgba(255, 255, 255, 0.08);
+    --state-focus:   rgba(255, 255, 255, 0.12);
+    --state-pressed: rgba(255, 255, 255, 0.12);
+
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.60), 0 1px 3px 1px rgba(0, 0, 0, 0.30);
+    --elevation-2: 0 1px 2px rgba(0, 0, 0, 0.60), 0 2px 6px 2px rgba(0, 0, 0, 0.30);
+    --elevation-3: 0 1px 3px rgba(0, 0, 0, 0.60), 0 4px 8px 3px rgba(0, 0, 0, 0.30);
+  }
+}
+
+/* ---------- 全局重置 ---------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  font-family: "Roboto", "Noto Sans SC", "PingFang SC",
+               "Microsoft YaHei UI", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.25px;
+  color: var(--on-surface);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+  cursor: default;
+  outline: none;
+  border: none;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   主容器
+   ============================================================ */
+.main {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+
+  background: var(--surface);
+  color: var(--on-surface);
+
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--shape-lg);
+}
+
+/* ============================================================
+   顶部应用栏 / 窗口装饰
+   ============================================================ */
+.decoration {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  height: 48px;
+  padding: 0 4px 0 16px;
+  background: transparent;
+  -webkit-app-region: drag;
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 4px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  font-weight: 500;
+  color: var(--on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.decoration button {
+  -webkit-app-region: no-drag;
+  display: grid;
+  place-items: center;
+
+  width: 40px;
+  height: 40px;
+  border-radius: var(--shape-full);
+
+  color: var(--on-surface-variant);
+  background: transparent;
+
+  transition: background var(--dur-short) var(--ease-standard),
+              color var(--dur-short) var(--ease-standard);
+}
+
+.decoration button:hover {
+  background: var(--state-hover);
+  color: var(--on-surface);
+}
+
+.decoration button:active {
+  background: var(--state-pressed);
+}
+
+.decoration button.close_button:hover {
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+
+.decoration button.close_button:active {
+  background: var(--error-container);
+  color: var(--on-error-container);
+  filter: brightness(0.94);
+}
+
+.decoration button.min_button {
+  font-size: 20px;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+
+.decoration button.max_button {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.decoration button.close_button {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* ============================================================
+   顶部工具条
+   ============================================================ */
+.appbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 8px 16px 12px;
+}
+
+/* ------------------------------------------------------------
+   Filled button · 文件选择
+   ------------------------------------------------------------ */
+.file_input {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+
+  font-size: 0;
+  color: transparent;
+
+  background: transparent;
+  border: none;
+  cursor: default;
+  overflow: hidden;
+
+  min-height: 40px;
+}
+
+.file_input::file-selector-button,
+.file_input::-webkit-file-upload-button {
+  margin: 0;
+  padding: 10px 24px;
+  min-height: 40px;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  color: var(--on-primary);
+
+  background: var(--primary);
+  border: none;
+  border-radius: var(--shape-full);
+  box-shadow: none;
+  cursor: default;
+
+  transition: background var(--dur-short) var(--ease-standard),
+              box-shadow var(--dur-short) var(--ease-standard);
+}
+
+.file_input:hover::file-selector-button,
+.file_input:hover::-webkit-file-upload-button {
+  background:
+    linear-gradient(var(--state-hover), var(--state-hover)),
+    var(--primary);
+  box-shadow: var(--elevation-1);
+}
+
+.file_input:active::file-selector-button,
+.file_input:active::-webkit-file-upload-button {
+  background:
+    linear-gradient(var(--state-pressed), var(--state-pressed)),
+    var(--primary);
+  box-shadow: var(--elevation-0);
+}
+
+/* ------------------------------------------------------------
+   Tonal button · 清空
+   ------------------------------------------------------------ */
+.clear_button {
+  flex: 0 0 auto;
+
+  padding: 10px 24px;
+  min-height: 40px;
+
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  color: var(--on-secondary-container);
+
+  background: var(--secondary-container);
+  border: none;
+  border-radius: var(--shape-full);
+  box-shadow: none;
+
+  transition: background var(--dur-short) var(--ease-standard);
+}
+
+.clear_button:hover {
+  background:
+    linear-gradient(var(--state-hover), var(--state-hover)),
+    var(--secondary-container);
+}
+
+.clear_button:active {
+  background:
+    linear-gradient(var(--state-pressed), var(--state-pressed)),
+    var(--secondary-container);
+}
+
+/* ============================================================
+   播放列表
+   ============================================================ */
+.list_view {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 16px;
+  padding: 8px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  background: var(--surface-container);
+  border: none;
+  border-radius: var(--shape-md);
+  box-shadow: none;
+}
+
+.list_view > div {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  height: 48px;
+  padding: 0 8px 0 16px;
+  border-radius: var(--shape-full);
+
+  transition: background var(--dur-short) var(--ease-standard);
+}
+
+.list_view > div:hover {
+  background: var(--state-hover);
+}
+
+.list_view > div:active {
+  background: var(--state-pressed);
+}
+
+/* 选中项：整行 secondary-container */
+.list_view > div:has(.playing_item) {
+  background: var(--secondary-container);
+}
+
+.list_view > div:has(.playing_item):hover {
+  background:
+    linear-gradient(var(--state-hover), var(--state-hover)),
+    var(--secondary-container);
+}
+
+.item_label,
+.playing_item {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  color: var(--on-surface);
+}
+
+.playing_item {
+  color: var(--on-secondary-container);
+  font-weight: 500;
+}
+
+.list_view > div > button.delete_item {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+
+  width: 40px;
+  height: 40px;
+  border-radius: var(--shape-full);
+
+  font-size: 18px;
+  line-height: 1;
+  color: var(--on-surface-variant);
+
+  opacity: 0;
+  transition: opacity var(--dur-short) var(--ease-standard),
+              background var(--dur-short) var(--ease-standard),
+              color var(--dur-short) var(--ease-standard);
+}
+
+.list_view > div:hover > button.delete_item,
+.list_view > div > button.delete_item:focus-visible {
+  opacity: 1;
+}
+
+.list_view > div > button.delete_item:hover {
+  background: var(--state-hover);
+  color: var(--on-surface);
+}
+
+.list_view > div > button.delete_item:active {
+  background: var(--state-pressed);
+}
+
+.list_view > div:has(.playing_item) > button.delete_item {
+  color: var(--on-secondary-container);
+}
+
+/* ============================================================
+   进度条区
+   ============================================================ */
+.process_div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 12px 24px 0;
+}
+
+.process_div label {
+  min-width: 60px;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.4px;
+  color: var(--on-surface-variant);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.process_div label:first-child {
+  text-align: right;
+}
+
+.process_div label:last-child {
+  text-align: left;
+}
+
+.slider {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
+
+  cursor: default;
+  accent-color: var(--primary);
+}
+
+/* ============================================================
+   底部播放控制
+   ============================================================ */
+.bottom_div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 12px 20px 24px;
+}
+
+.bottom_div button {
+  display: grid;
+  place-items: center;
+
+  width: 48px;
+  height: 48px;
+  border-radius: var(--shape-full);
+
+  font-family: "Segoe UI Symbol", "Noto Sans Symbols 2",
+               "Apple Symbols", "Roboto", sans-serif;
+  font-variant-emoji: text;
+
+  color: var(--on-surface-variant);
+  background: transparent;
+
+  transition: background var(--dur-short) var(--ease-standard),
+              color var(--dur-short) var(--ease-standard),
+              box-shadow var(--dur-short) var(--ease-standard),
+              transform var(--dur-short) var(--ease-standard);
+}
+
+.bottom_div button:hover {
+  background: var(--state-hover);
+  color: var(--on-surface);
+}
+
+.bottom_div button:active {
+  background: var(--state-pressed);
+}
+
+.bottom_div button.previous_button,
+.bottom_div button.next_button {
+  font-size: 24px;
+  line-height: 1;
+}
+
+/* FAB · 播放 / 暂停 */
+.bottom_div button.play_button {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--shape-lg);
+
+  font-size: 24px;
+  line-height: 1;
+
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  box-shadow: var(--elevation-2);
+}
+
+.bottom_div button.play_button:hover {
+  background:
+    linear-gradient(var(--state-hover), var(--state-hover)),
+    var(--primary-container);
+  color: var(--on-primary-container);
+  box-shadow: var(--elevation-3);
+}
+
+.bottom_div button.play_button:active {
+  background:
+    linear-gradient(var(--state-pressed), var(--state-pressed)),
+    var(--primary-container);
+  color: var(--on-primary-container);
+  box-shadow: var(--elevation-1);
+  transform: scale(0.96);
+}
+
+.bottom_div button.play_button.playing {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.bottom_div button.play_button.playing:hover {
+  background:
+    linear-gradient(var(--state-hover), var(--state-hover)),
+    var(--primary);
+  color: var(--on-primary);
+}
+
+.bottom_div button.play_button.playing:active {
+  background:
+    linear-gradient(var(--state-pressed), var(--state-pressed)),
+    var(--primary);
+  color: var(--on-primary);
+}
+
+/* ============================================================
+   滚动条
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: var(--shape-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--outline);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--outline);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+/* ============================================================
+   减少动效偏好
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
