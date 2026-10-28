@@ -1,11 +1,11 @@
 # zmusicplayer-rs
 
-基于[`Tauri`](https://tauri.app/)和`Rust`制作的简易音乐播放器
+基于[`Dioxus`](https://dioxuslabs.com)和`Rust`制作的简易音乐播放器
 
 ## 构建
 
 ```shell
-pnpm tauri build
+dx bundle --platform desktop --release
 ```
 
 ## LICENSE
