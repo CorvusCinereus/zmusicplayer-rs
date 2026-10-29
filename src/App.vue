@@ -7,6 +7,8 @@ import { readDir } from '@tauri-apps/plugin-fs';
 import { load } from '@tauri-apps/plugin-store';
 import { invoke } from '@tauri-apps/api/core';
 
+const AUDIO_EXT = new Set(['mp3','flac','wav','ogg','m4a','aac','opus','wma','aiff','alac'])
+
 const tab = ref("music_list")
 const search = ref("")
 const music_list = ref([])
@@ -14,33 +16,40 @@ const current_index = ref(-1)
 const playing = ref(false)
 const path = ref("")
 const loop = ref(false)
-let store = undefined
+const length = ref(0)
+const now = ref(0)
+const dragging = ref(false)
+let store = null
+let process_listener = null
 
 async function on_delete_item(index) {
   if (current_index.value === index) {
     current_index.value = -1
     await stop()
-  } else if (index < current_index.value && current_index.value != 0) {
+  } else if (index < current_index.value) {
     current_index.value -= 1
   }
   music_list.value.splice(index, 1)
 }
 
 async function on_play_button() {
+  if (current_index.value === -1) return
   try {
     await invoke('switch')
+    playing.value = !playing.value
   } catch (err) {
     await message(err, {kind: "error"})
   }
-  playing.value = !playing.value
 }
 
 async function on_update(val) {
+  if (playing.value) await stop()
   path.value = val
   await store.set('path', val)
+  await store.save()
 
   music_list.value = []
-  scan_dir(val)
+  await scan_dir(val)
 }
 
 async function scan_dir(dir) {
@@ -48,9 +57,10 @@ async function scan_dir(dir) {
     const entries = await readDir(dir)
     for (const entry of entries) {
       if (entry.isDirectory) {
-        scan_dir(`${path.value}/${entry.name}`)
+        await scan_dir(`${dir}/${entry.name}`)
       } else {
-        music_list.value.push(entry.name)
+        const ext = entry.name.split('.').pop()?.toLowerCase()
+        if (AUDIO_EXT.has(ext)) music_list.value.push(entry.name)
       }
     }
   } catch (err) {
@@ -59,8 +69,9 @@ async function scan_dir(dir) {
 }
 
 async function play_music(index) {
+  now.value = 0
   try {
-    await invoke('play_music', { path: `${path.value}/${music_list.value[index]}` })
+    length.value = await invoke('play_music', { path: `${path.value}/${music_list.value[index]}` })
     current_index.value = index
     playing.value = true
   } catch (err) {
@@ -73,38 +84,88 @@ async function stop() {
     await invoke('stop')
     current_index.value = -1
     playing.value = false
+    now.value = 0
+    length.value = 0
   } catch (err) {
     await message(err, {kind: 'error'})
   }
 }
 
 async function next() {
-  current_index.value += 1
-  if (current_index.value === music_list.value.length) {
-    current_index.value = 0
-  }
-  await play_music(current_index.value)
+  const n = music_list.value.length
+  if (!n) return
+  const cur = current_index.value < 0 ? -1 : current_index.value
+  await play_music((cur + 1) % n)
 }
 
 async function previous() {
-  current_index.value -= 1
-  if (current_index.value < 0) {
-    current_index.value = music_list.value.length - 1
-  }
-  await play_music(current_index.value)
+  const n = music_list.value.length
+  if (!n) return
+  const cur = current_index.value < 0 ? 0 : current_index.value
+  await play_music((cur - 1 + n) % n)
 }
 
 async function change_loop() {
   loop.value = !loop.value
   await store.set('loop', loop.value)
+  await store.save()
+}
+
+async function on_seek() {
+  try {
+    if (length.value > 0 && now.value >= length.value) {
+      if (loop.value) {
+        await play_music(current_index.value)
+      } else {
+        await next()
+      }
+      return
+    }
+    await invoke('seek', {pos: now.value})
+  } catch (err) {
+    playing.value = false
+    await stop()
+    await message(err, {kind: 'error'})
+  }
+}
+
+async function update_pos() {
+  if (!playing.value || dragging.value) return
+  let pos, finished
+  try {
+    [pos, finished] = await invoke('get_pos')
+  } catch {
+    return
+  }
+  now.value = pos
+  if (finished && playing.value) {
+    playing.value = false
+    if (loop.value) {
+      await play_music(current_index.value)
+    } else {
+      await next()
+    }
+  }
+}
+
+function format_duration(d) {
+  return new Date(d * 1000).toISOString().slice(11, 19)
 }
 
 onMounted(async () => {
-  store = await load('store.json', { autoSave: true })
-  loop.value = await store.get('loop')
-  path.value = await store.get("path")
+  store = await load('store.json', { autoSave: false })
+  loop.value = (await store.get('loop')) ?? false
+  path.value = (await store.get('path')) ?? ""
   if (path.value) {
     scan_dir(path.value)
+  }
+
+  process_listener = setInterval(update_pos, 500)
+})
+
+onUnmounted(() => {
+  if (process_listener) {
+    clearInterval(process_listener)
   }
 })
 
@@ -125,7 +186,7 @@ onMounted(async () => {
     <div class="center fill">
         <div class="music_list_div" v-if="tab === 'music_list'">
             <ul>
-                <li class="music_item" :class="{active: current_index === index}" v-for="(item, index) in music_list" @click="() => play_music(index)">
+                <li class="music_item" :class="{active: current_index === index}" v-for="(item, index) in music_list" v-show="item.includes(search)" @click="() => play_music(index)">
                     <div class="music_item_title">{{item}}</div>
                     <button class="music_item_button" @click.stop="on_delete_item(index)">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -149,6 +210,11 @@ onMounted(async () => {
             </ul>
         </div>
         <SettingPage class="setting_page" @update="on_update" :dir="path" v-else></SettingPage>
+    </div>
+    <div class="process_row" v-if="tab === 'music_list'">
+        <label class="now">{{format_duration(now)}}</label>
+        <input class="process_slider" type="range" min="0" :max="length" v-model.number="now" @change="on_seek" @pointerdown="dragging = true" @pointerup="dragging = false"   :style="{ '--fill': (length > 0 ? (now / length) * 100 : 0) + '%' }"></input>
+        <label class="length">{{format_duration(length)}}</label>
     </div>
     <div class="control_row" v-if="tab === 'music_list'">
         <button class="previous_button" @click="previous">
@@ -204,109 +270,432 @@ onMounted(async () => {
   </main>
 </template>
 
-<style>
-* { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
-body {
-  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: #222;
-  background: #fff;
+<style scoped>
+/* ============ MD3 Tokens & 全局重置 ============ */
+:global(html),
+:global(body),
+:global(#app) {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
-button { font: inherit; cursor: pointer; }
-input { font: inherit; outline: none; }
-svg { display: block; }
+
+:global(body) {
+  overflow: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 .container {
+  --md-primary: #6750A4;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #EADDFF;
+  --md-on-primary-container: #21005D;
+  --md-secondary-container: #E8DEF8;
+  --md-on-secondary-container: #1D192B;
+  --md-surface: #FEF7FF;
+  --md-surface-container-low: #F7F2FA;
+  --md-surface-container: #F3EDF7;
+  --md-surface-container-high: #ECE6F0;
+  --md-surface-container-highest: #E6E0E9;
+  --md-on-surface: #1D1B20;
+  --md-on-surface-variant: #49454F;
+  --md-outline: #79747E;
+  --md-outline-variant: #CAC4D0;
+
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100vh;
-  max-width: 420px;
-  margin: 0 auto;
-  border-left: 1px solid #eee;
-  border-right: 1px solid #eee;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  font-family: 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ---- 顶栏 ---- */
-.appbar { flex: none; padding: 12px 16px; border-bottom: 1px solid #eee; }
-.appbar_row { display: flex; align-items: center; gap: 8px; }
-.appbar_row .icon { flex: none; color: #888; }
+/* ============ 顶部搜索栏 / 标题 ============ */
+.appbar {
+  flex: 0 0 auto;
+  padding: 12px 16px 8px;
+}
+
+.appbar_row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 16px 0 14px;
+  border-radius: 28px;
+  background: var(--md-surface-container-high);
+  transition: background-color .2s, box-shadow .2s;
+}
+
+.appbar_row:focus-within {
+  background: var(--md-surface-container-highest);
+  box-shadow: inset 0 0 0 2px var(--md-primary);
+}
+
+.appbar_row .icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--md-on-surface-variant);
+}
+
 .search {
-  flex: 1;
-  padding: 8px 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
   border: none;
-  border-radius: 8px;
-  background: #f2f3f5;
+  outline: none;
+  background: transparent;
+  color: var(--md-on-surface);
+  font-family: inherit;
+  font-size: .95rem;
 }
-.title { font-size: 18px; font-weight: 600; }
 
-/* ---- 列表 ---- */
-.center.fill { flex: 1; overflow-y: auto; }
-.music_list_div ul { list-style: none; margin: 0; padding: 0; }
+.search::placeholder {
+  color: var(--md-on-surface-variant);
+}
+
+.title {
+  display: block;
+  padding: 0 4px;
+  font-size: 1.375rem;
+  font-weight: 400;
+  line-height: 48px;
+  color: var(--md-on-surface);
+}
+
+/* ============ 内容区（自适应填充剩余空间） ============ */
+.center {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fill {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.setting_page {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+/* ============ 歌曲列表 ============ */
+.music_list_div {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 4px 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.music_list_div::-webkit-scrollbar {
+  width: 8px;
+}
+
+.music_list_div::-webkit-scrollbar-thumb {
+  background: var(--md-outline-variant);
+  border-radius: 4px;
+}
+
+.music_list_div::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.music_list_div ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .music_item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  padding: 14px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  min-height: 56px;
+  padding: 0 8px 0 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color .2s, color .2s;
+}
+
+.music_item:hover {
+  background: color-mix(in srgb, var(--md-on-surface) 8%, transparent);
+}
+
+.music_item.active {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+.music_item.active:hover {
+  background: color-mix(in srgb, var(--md-secondary-container) 92%, var(--md-on-secondary-container));
+}
+
+.music_item_title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: .875rem;
+  font-weight: 500;
+  letter-spacing: .1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music_item_button {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .2s, background-color .2s, color .2s;
+}
+
+.music_item_button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.music_item:hover .music_item_button,
+.music_item.active .music_item_button {
+  opacity: 1;
+}
+
+.music_item_button:hover {
+  background: color-mix(in srgb, var(--md-on-surface) 12%, transparent);
+  color: var(--md-on-surface);
+}
+
+/* ============ 进度条 ============ */
+.process_row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 16px;
+}
+
+.now,
+.length {
+  flex: 0 0 auto;
+  min-width: 44px;
+  font-size: .75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--md-on-surface-variant);
+  text-align: center;
+}
+
+.process_slider {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 4px;
+  margin: 0;
+  border-radius: 2px;
+  /* 已播放 / 未播放两段填充 */
+  background: linear-gradient(
+    to right,
+    var(--md-primary) 0%,
+    var(--md-primary) var(--fill, 0%),
+    var(--md-outline-variant) var(--fill, 0%),
+    var(--md-outline-variant) 100%
+  );
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
   cursor: pointer;
 }
-.music_item:hover { background: #fafafa; }
-.music_item.active { background: #eef4ff; color: #2f6fed; font-weight: 600; }
-.music_item_title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.music_item_button {
-  flex: none;
-  display: flex;
-  padding: 4px;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: #bbb;
-}
-.music_item_button:hover { color: #e5484d; background: #fdecec; }
 
-/* ---- 播放控制 ---- */
-.control_row {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 28px;
-  padding: 12px 16px;
-  border-top: 1px solid #eee;
+/* 让原生 track 透明，露出 input 的渐变背景 */
+.process_slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
 }
-.control_row button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
+
+.process_slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.process_slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
   border: none;
   border-radius: 50%;
-  background: none;
-  color: #333;
+  background: var(--md-primary);
+  cursor: pointer;
+  transition: box-shadow .15s;
+  margin-top: -5px;
 }
-.control_row button:hover { background: #f2f3f5; }
-.control_row .play_button {
+
+.process_slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--md-primary) 16%, transparent);
+}
+
+.process_slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--md-primary);
+  cursor: pointer;
+}
+
+/* ============ 播放控制 ============ */
+.control_row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 16px 8px;
+}
+
+.control_row button {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  transition: background-color .2s, color .2s, transform .1s;
+}
+
+.control_row button:hover {
+  background: color-mix(in srgb, var(--md-on-surface) 8%, transparent);
+}
+
+.control_row button:active {
+  transform: scale(.94);
+}
+
+.previous_button,
+.next_button,
+.loop_button {
+  width: 48px;
+  height: 48px;
+}
+
+.loop_button {
+  color: var(--md-on-surface-variant);
+}
+
+.play_button {
   width: 56px;
   height: 56px;
-  background: #2f6fed;
-  color: #fff;
+  margin: 0 8px;
+  background: var(--md-primary);
+  color: var(--md-on-primary);
 }
-.control_row .play_button:hover { background: #1f5ad6; }
 
-/* ---- 底部 tab ---- */
-.bottom_row_tab { flex: none; display: flex; border-top: 1px solid #eee; }
+.play_button:hover {
+  background: color-mix(in srgb, var(--md-primary) 92%, var(--md-on-primary));
+}
+
+.play_button:active {
+  background: color-mix(in srgb, var(--md-primary) 84%, var(--md-on-primary));
+}
+
+/* ============ 底部导航栏 ============ */
+.bottom_row_tab {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  height: 80px;
+  padding: 8px 12px;
+  background: var(--md-surface-container);
+  border-top: 1px solid var(--md-outline-variant);
+}
+
 .bottom_col {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 8px 0;
-  color: #999;
-  font-size: 12px;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 16px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--md-on-surface-variant);
+  background: transparent;
+  transition: color .2s, background-color .2s;
+}
+
+.bottom_col:hover {
+  background: color-mix(in srgb, var(--md-on-surface) 8%, transparent);
+}
+
+.bottom_col.active {
+  color: var(--md-on-secondary-container);
+  background: var(--md-secondary-container);
+}
+
+.bottom_col.active:hover {
+  background: var(--md-secondary-container);
+}
+
+.bottom_col svg {
+  width: 24px;
+  height: 24px;
+}
+
+.bottom_col label {
+  font-size: .75rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: .5px;
   cursor: pointer;
 }
-.bottom_col.active { color: #2f6fed; }
+
+/* ============ 小屏适配 ============ */
+@media (max-width: 420px) {
+  .appbar {
+    padding: 8px 12px 4px;
+  }
+
+  .process_row {
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  .control_row {
+    gap: 4px;
+    padding: 4px 12px 8px;
+  }
+}
 </style>

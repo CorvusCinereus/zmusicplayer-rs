@@ -1,7 +1,6 @@
 <script setup>
 
-import { message } from '@tauri-apps/plugin-dialog';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, message } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { onMounted, ref } from 'vue';
 
@@ -17,6 +16,7 @@ async function on_choose_dir() {
     multiple: false,
     directory: true
   })
+  if (!dir) return
   path.value = dir
   emit('update', dir)
 }
@@ -58,7 +58,7 @@ onMounted(() => {
               <line x1="16" y1="9" x2="22" y2="15" />
               <line x1="22" y1="9" x2="16" y2="15" />
             </svg>
-            <input class="slider" type="range" min="0.0" max="1.0" step="0.1" v-model.number="volume" @input="on_volume_input"></input>
+            <input class="slider" type="range" min="0.0" max="1.0" step="0.1" v-model.number="volume" @input="on_volume_input"   :style="{ '--fill': (volume * 100) + '%' }"></input>
         </div>
     </div>
     <div class="card">
@@ -81,55 +81,193 @@ onMounted(() => {
 </div>
 </template>
 
-<style>
+<style scoped>
+/* ============ MD3 Tokens ============ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .col {
+  --md-primary: #6750A4;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #EADDFF;
+  --md-surface-container-low: #F7F2FA;
+  --md-surface-container: #F3EDF7;
+  --md-surface-container-high: #ECE6F0;
+  --md-on-surface: #1D1B20;
+  --md-on-surface-variant: #49454F;
+  --md-outline: #79747E;
+  --md-outline-variant: #CAC4D0;
+
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
+  gap: 12px;
   width: 100%;
+  padding: 8px 16px 16px;
+  overflow-y: auto;
 }
 
+.col::-webkit-scrollbar {
+  width: 8px;
+}
+
+.col::-webkit-scrollbar-thumb {
+  background: var(--md-outline-variant);
+  border-radius: 4px;
+}
+
+.col::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ============ 卡片 ============ */
 .card {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 16px;
-  border-radius: 12px;
-  background: #f7f8fa;
+  border-radius: 16px;
+  background: var(--md-surface-container-low);
 }
-.card > svg { margin-bottom: 8px; }
 
-.volume_label,
+/* ============ 音量 ============ */
+.volume_label {
+  font-size: .875rem;
+  font-weight: 500;
+  letter-spacing: .1px;
+  color: var(--md-on-surface-variant);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.row svg {
+  flex: 0 0 auto;
+  color: var(--md-primary);
+}
+
+.slider {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 4px;
+  margin: 0;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--md-primary) 0%,
+    var(--md-primary) var(--fill, 0%),
+    var(--md-outline-variant) var(--fill, 0%),
+    var(--md-outline-variant) 100%
+  );
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--md-primary);
+  cursor: pointer;
+  transition: box-shadow .15s;
+  margin-top: -5px;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--md-primary) 16%, transparent);
+}
+
+.slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--md-primary);
+  cursor: pointer;
+}
+
+/* ============ 目录选择 ============ */
 .dir_label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: #888;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--md-on-surface);
 }
 
-.row { display: flex; align-items: center; gap: 12px; }
-.slider { flex: 1; accent-color: #2f6fed; }
-
-.choose_div { display: flex; align-items: center; gap: 12px; }
-.choose_col { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.choose_div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
 
 .path {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid #e2e4e8;
+  flex: 1 1 160px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--md-outline-variant);
   border-radius: 8px;
-  background: #fff;
-  color: #555;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font-family: inherit;
+  font-size: .875rem;
+  text-overflow: ellipsis;
+  outline: none;
 }
-.path:disabled { background: #fff; color: #999; }
 
-.count { font-size: 12px; color: #aaa; }
+.path:disabled {
+  opacity: 1;
+  cursor: default;
+}
 
 .choose {
-  flex: none;
-  padding: 8px 14px;
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 24px;
   border: none;
-  border-radius: 8px;
-  background: #2f6fed;
-  color: #fff;
+  border-radius: 20px;
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  font-family: inherit;
+  font-size: .875rem;
+  font-weight: 500;
+  letter-spacing: .1px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .2s, box-shadow .2s;
 }
-.choose:hover { background: #1f5ad6; }
+
+.choose:hover {
+  background: color-mix(in srgb, var(--md-primary) 92%, var(--md-on-primary));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 1px 3px 1px rgba(0, 0, 0, .15);
+}
+
+.choose:active {
+  background: color-mix(in srgb, var(--md-primary) 84%, var(--md-on-primary));
+}
 </style>
