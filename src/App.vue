@@ -5,6 +5,7 @@ import SettingPage from './SettingPage.vue';
 import { message } from '@tauri-apps/plugin-dialog';
 import { readDir } from '@tauri-apps/plugin-fs';
 import { load } from '@tauri-apps/plugin-store';
+import { invoke } from '@tauri-apps/api/core';
 
 const tab = ref("music_list")
 const search = ref("")
@@ -13,17 +14,22 @@ const current_index = ref(-1)
 const playing = ref(false)
 const path = ref("")
 
-function on_delete_item(index) {
+async function on_delete_item(index) {
   if (current_index.value === index) {
     current_index.value = -1
-    // TODO: 停止播放
+    await stop()
   } else if (index < current_index.value && current_index.value != 0) {
     current_index.value -= 1
   }
   music_list.value.splice(index, 1)
 }
 
-function on_play_button() {
+async function on_play_button() {
+  try {
+    await invoke('switch')
+  } catch (err) {
+    await message(err, {kind: "error"})
+  }
   playing.value = !playing.value
 }
 
@@ -31,6 +37,8 @@ async function on_update(val) {
   path.value = val
   const store = await load("store.json", { autoSave: true })
   await store.set("path", val)
+
+  music_list.value = []
   scan_dir(val)
 }
 
@@ -39,7 +47,7 @@ async function scan_dir(dir) {
     const entries = await readDir(dir)
     for (const entry of entries) {
       if (entry.isDirectory) {
-        scan_dir(entry.name)
+        scan_dir(`${path.value}/${entry.name}`)
       } else {
         music_list.value.push(entry.name)
       }
@@ -47,6 +55,42 @@ async function scan_dir(dir) {
   } catch (err) {
     await message(err, {kind: "error"})
   }
+}
+
+async function play_music(index) {
+  try {
+    await invoke('play_music', { path: `${path.value}/${music_list.value[index]}` })
+    current_index.value = index
+    playing.value = true
+  } catch (err) {
+    await message(err, {kind: 'error'})
+  }
+}
+
+async function stop() {
+  try {
+    await invoke('stop')
+    current_index.value = -1
+    playing.value = false
+  } catch (err) {
+    await message(err, {kind: 'error'})
+  }
+}
+
+async function next() {
+  current_index.value += 1
+  if (current_index.value === music_list.value.length) {
+    current_index.value = 0
+  }
+  await play_music(current_index.value)
+}
+
+async function previous() {
+  current_index.value -= 1
+  if (current_index.value < 0) {
+    current_index.value = music_list.value.length - 1
+  }
+  await play_music(current_index.value)
 }
 
 onMounted(async () => {
@@ -74,7 +118,7 @@ onMounted(async () => {
     <div class="center fill">
         <div class="music_list_div" v-if="tab === 'music_list'">
             <ul>
-                <li class="music_item" :class="{active: current_index === index}" v-for="(item, index) in music_list" @click="current_index = index">
+                <li class="music_item" :class="{active: current_index === index}" v-for="(item, index) in music_list" @click="() => play_music(index)">
                     <div class="music_item_title">{{item}}</div>
                     <button class="music_item_button" @click.stop="on_delete_item(index)">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -100,7 +144,7 @@ onMounted(async () => {
         <SettingPage class="setting_page" @update="on_update" :dir="path" v-else></SettingPage>
     </div>
     <div class="control_row" v-if="tab === 'music_list'">
-        <button class="previous_button">
+        <button class="previous_button" @click="previous">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
               <path d="M6 6h2v12H6zm12 0v12l-10-6z"/>
             </svg>
@@ -114,7 +158,7 @@ onMounted(async () => {
               <polygon points="8,5 19,12 8,19"/>
             </svg>
         </button>
-        <button class="next_button">
+        <button class="next_button" @click="next">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
               <path d="M18 6h2v12h-2zM6 6v12l10-6z"/>
             </svg>
