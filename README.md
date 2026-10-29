@@ -4,8 +4,25 @@
 
 ## 构建
 
-```shell
+```bash
+pnpm install
 pnpm tauri build
+```
+
+## 平台相关问题
+
+### Debian
+
+经过测试在Debian运行可能会出现如下报错
+
+```bash
+ALSA lib pcm_dmix.c:1000:(snd_pcm_dmix_open) unable to open slave
+```
+
+解决方法
+
+```bash
+sudo apt install pipewire-alsa
 ```
 
 ## LICENSE

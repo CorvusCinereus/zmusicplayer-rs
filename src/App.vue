@@ -21,6 +21,7 @@ const now = ref(0)
 const dragging = ref(false)
 let store = null
 let process_listener = null
+let volume = null
 
 async function on_delete_item(index) {
   if (current_index.value === index) {
@@ -152,10 +153,16 @@ function format_duration(d) {
   return new Date(d * 1000).toISOString().slice(11, 19)
 }
 
+async function on_volume_change(val) {
+  await store.set('volume', val)
+  await store.save()
+}
+
 onMounted(async () => {
   store = await load('store.json', { autoSave: false })
   loop.value = (await store.get('loop')) ?? false
   path.value = (await store.get('path')) ?? ""
+  volume = (await store.get('volume')) ?? 1.0
   if (path.value) {
     scan_dir(path.value)
   }
@@ -209,7 +216,7 @@ onUnmounted(() => {
                 </li>
             </ul>
         </div>
-        <SettingPage class="setting_page" @update="on_update" :dir="path" v-else></SettingPage>
+        <SettingPage class="setting_page" @update="on_update" @volume_change="on_volume_change" :dir="path" :v="volume" v-else></SettingPage>
     </div>
     <div class="process_row" v-if="tab === 'music_list'">
         <label class="now">{{format_duration(now)}}</label>

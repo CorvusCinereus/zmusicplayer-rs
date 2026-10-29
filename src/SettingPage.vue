@@ -6,9 +6,10 @@ import { onMounted, ref } from 'vue';
 
 const volume = ref(1.0)
 const path = ref("")
-const emit = defineEmits(['update'])
+const emit = defineEmits(['update', 'volume_change'])
 const props = defineProps({
-  dir: String
+  dir: String,
+  v: Number
 })
 
 async function on_choose_dir() {
@@ -29,8 +30,18 @@ async function on_volume_input() {
   }
 }
 
-onMounted(() => {
+function on_volume_change() {
+  emit('volume_change', volume.value)
+}
+
+onMounted(async () => {
   path.value = props.dir
+  volume.value = props.v
+  try {
+    await invoke('set_volume', {volume: volume.value})
+  } catch (err) {
+    await message(err, {kind: "error"})
+  }
 })
 
 </script>
@@ -58,7 +69,7 @@ onMounted(() => {
               <line x1="16" y1="9" x2="22" y2="15" />
               <line x1="22" y1="9" x2="16" y2="15" />
             </svg>
-            <input class="slider" type="range" min="0.0" max="1.0" step="0.1" v-model.number="volume" @input="on_volume_input"   :style="{ '--fill': (volume * 100) + '%' }"></input>
+            <input class="slider" type="range" min="0.0" max="1.0" step="0.1" v-model.number="volume" @input="on_volume_input"  @pointerup="on_volume_change" :style="{ '--fill': (volume * 100) + '%' }"></input>
         </div>
     </div>
     <div class="card">
