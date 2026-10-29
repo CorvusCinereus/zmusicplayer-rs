@@ -60,7 +60,7 @@ async function scan_dir(dir) {
         await scan_dir(`${dir}/${entry.name}`)
       } else {
         const ext = entry.name.split('.').pop()?.toLowerCase()
-        if (AUDIO_EXT.has(ext)) music_list.value.push(entry.name)
+        if (AUDIO_EXT.has(ext)) music_list.value.push({name: entry.name, path: `${dir}/${entry.name}`})
       }
     }
   } catch (err) {
@@ -71,7 +71,7 @@ async function scan_dir(dir) {
 async function play_music(index) {
   now.value = 0
   try {
-    length.value = await invoke('play_music', { path: `${path.value}/${music_list.value[index]}` })
+    length.value = await invoke('play_music', { path: music_list.value[index].path})
     current_index.value = index
     playing.value = true
   } catch (err) {
@@ -186,8 +186,8 @@ onUnmounted(() => {
     <div class="center fill">
         <div class="music_list_div" v-if="tab === 'music_list'">
             <ul>
-                <li class="music_item" :class="{active: current_index === index}" v-for="(item, index) in music_list" v-show="item.includes(search)" @click="() => play_music(index)">
-                    <div class="music_item_title">{{item}}</div>
+                <li class="music_item" :class="{active: current_index === index}" v-for="(item, index) in music_list" v-show="item.name.includes(search)" @click="() => play_music(index)">
+                    <div class="music_item_title">{{item.name}}</div>
                     <button class="music_item_button" @click.stop="on_delete_item(index)">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <!-- 垃圾桶盖上的提手 -->
