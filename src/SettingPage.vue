@@ -64,7 +64,7 @@ onMounted(async () => {
               <line x1="16" y1="9" x2="22" y2="15" />
               <line x1="22" y1="9" x2="16" y2="15" />
             </svg>
-            <input class="slider" type="range" min="0.0" max="1.0" step="0.1" v-model.number="volume" @input="on_volume_input"  @pointerup="on_volume_change" :style="{ '--fill': (volume * 100) + '%' }"></input>
+            <input class="slider" type="range" min="0.0" max="1.0" step="0.1" v-model.number="volume" @input="on_volume_input" @change="on_volume_change"  @pointerup="on_volume_change" :style="{ '--fill': (volume * 100) + '%' }"></input>
         </div>
     </div>
     <div class="card">

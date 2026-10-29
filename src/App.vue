@@ -21,7 +21,7 @@ const now = ref(0)
 const dragging = ref(false)
 let store = null
 let process_listener = null
-let volume = null
+let volume = 1.0
 
 async function on_delete_item(index) {
   if (current_index.value === index) {
@@ -54,19 +54,30 @@ async function on_update(val) {
 }
 
 async function scan_dir(dir) {
-  try {
-    const entries = await readDir(dir)
-    for (const entry of entries) {
-      if (entry.isDirectory) {
-        await scan_dir(`${dir}/${entry.name}`)
-      } else {
-        const ext = entry.name.split('.').pop()?.toLowerCase()
-        if (AUDIO_EXT.has(ext)) music_list.value.push({name: entry.name, path: `${dir}/${entry.name}`})
+  const result = []
+  async function scan(dir) {
+    try {
+      const entries = await readDir(dir)
+      for (const entry of entries) {
+        if (entry.isDirectory) {
+          await scan(`${dir}/${entry.name}`)
+        } else {
+          const ext = entry.name.split('.').pop()?.toLowerCase()
+          if (AUDIO_EXT.has(ext)) result.push({name: entry.name, path: `${dir}/${entry.name}`})
+        }
       }
+    } catch (err) {
+      await message(err, {kind: "error"})
     }
-  } catch (err) {
-    await message(err, {kind: "error"})
   }
+
+  await scan(dir)
+  music_list.value = result
+}
+
+function on_pointer_down(e) {
+  dragging.value = true
+  e.currentTarget.setPointerCapture(e.pointerId)
 }
 
 async function play_music(index) {
@@ -154,6 +165,7 @@ function format_duration(d) {
 }
 
 async function on_volume_change(val) {
+  volume = val
   await store.set('volume', val)
   await store.save()
 }
@@ -226,7 +238,7 @@ onUnmounted(() => {
     </div>
     <div class="process_row" v-if="tab === 'music_list'">
         <label class="now">{{format_duration(now)}}</label>
-        <input class="process_slider" type="range" min="0" :max="length" v-model.number="now" @change="on_seek" @pointerdown="dragging = true" @pointerup="dragging = false"   :style="{ '--fill': (length > 0 ? (now / length) * 100 : 0) + '%' }"></input>
+        <input class="process_slider" type="range" min="0" :max="length" v-model.number="now" @change="on_seek" @pointerdown="on_pointer_down" @pointerup="dragging = false" @pointercancel="dragging = false" :style="{ '--fill': (length > 0 ? (now / length) * 100 : 0) + '%' }"></input>
         <label class="length">{{format_duration(length)}}</label>
     </div>
     <div class="control_row" v-if="tab === 'music_list'">
