@@ -167,6 +167,12 @@ onMounted(async () => {
     scan_dir(path.value)
   }
 
+  try {
+    await invoke('set_volume', {volume: volume})
+  } catch (err) {
+    await message(err, {kind: "error"})
+  }
+
   process_listener = setInterval(update_pos, 500)
 })
 

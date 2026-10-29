@@ -37,11 +37,6 @@ function on_volume_change() {
 onMounted(async () => {
   path.value = props.dir
   volume.value = props.v
-  try {
-    await invoke('set_volume', {volume: volume.value})
-  } catch (err) {
-    await message(err, {kind: "error"})
-  }
 })
 
 </script>
