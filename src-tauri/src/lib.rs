@@ -48,6 +48,14 @@ fn switch(state: State<'_, Mutex<AppState>>) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn set_volume(state: State<'_, Mutex<AppState>>, volume: f32) -> Result<(), String> {
+    let state = state.lock().map_err(|e| e.to_string())?;
+    state.player.set_volume(volume);
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _handler = rodio::DeviceSinkBuilder::open_default_sink().expect("open default sink");
@@ -67,7 +75,9 @@ pub fn run() {
             }));
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![play_music, stop, switch])
+        .invoke_handler(tauri::generate_handler![
+            play_music, stop, switch, set_volume
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

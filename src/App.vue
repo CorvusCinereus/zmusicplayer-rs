@@ -1,6 +1,6 @@
 <script setup>
 
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import SettingPage from './SettingPage.vue';
 import { message } from '@tauri-apps/plugin-dialog';
 import { readDir } from '@tauri-apps/plugin-fs';
@@ -13,6 +13,8 @@ const music_list = ref([])
 const current_index = ref(-1)
 const playing = ref(false)
 const path = ref("")
+const loop = ref(false)
+let store = undefined
 
 async function on_delete_item(index) {
   if (current_index.value === index) {
@@ -35,8 +37,7 @@ async function on_play_button() {
 
 async function on_update(val) {
   path.value = val
-  const store = await load("store.json", { autoSave: true })
-  await store.set("path", val)
+  await store.set('path', val)
 
   music_list.value = []
   scan_dir(val)
@@ -93,8 +94,14 @@ async function previous() {
   await play_music(current_index.value)
 }
 
+async function change_loop() {
+  loop.value = !loop.value
+  await store.set('loop', loop.value)
+}
+
 onMounted(async () => {
-  const store = await load('store.json', { autoSave: false })
+  store = await load('store.json', { autoSave: true })
+  loop.value = await store.get('loop')
   path.value = await store.get("path")
   if (path.value) {
     scan_dir(path.value)
@@ -161,6 +168,21 @@ onMounted(async () => {
         <button class="next_button" @click="next">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
               <path d="M18 6h2v12h-2zM6 6v12l10-6z"/>
+            </svg>
+        </button>
+        <button class="loop_button" @click="change_loop">
+            <svg v-if="loop" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 6H7a4 4 0 0 0-4 4v2"/>
+              <path d="M3 18h14a4 4 0 0 0 4-4v-2"/>
+              <path d="M17 2l4 4-4 4"/>
+              <path d="M7 22l-4-4 4-4"/>
+              <text x="12" y="12" dy=".35em" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" font-size="13" fill="currentColor" stroke="none">1</text>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 6H7a4 4 0 0 0-4 4v2"/>
+              <path d="M3 18h14a4 4 0 0 0 4-4v-2"/>
+              <path d="M17 2l4 4-4 4"/>
+              <path d="M7 22l-4-4 4-4"/>
             </svg>
         </button>
     </div>

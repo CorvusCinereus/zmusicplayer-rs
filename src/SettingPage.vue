@@ -1,6 +1,8 @@
 <script setup>
 
+import { message } from '@tauri-apps/plugin-dialog';
 import { open } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
 import { onMounted, ref } from 'vue';
 
 const volume = ref(1.0)
@@ -17,6 +19,14 @@ async function on_choose_dir() {
   })
   path.value = dir
   emit('update', dir)
+}
+
+async function on_volume_input() {
+  try {
+    await invoke('set_volume', {volume: volume.value})
+  } catch (err) {
+    await message(err, {kind: "error"})
+  }
 }
 
 onMounted(() => {
@@ -48,7 +58,7 @@ onMounted(() => {
               <line x1="16" y1="9" x2="22" y2="15" />
               <line x1="22" y1="9" x2="16" y2="15" />
             </svg>
-            <input class="slider" type="range" min="0.0" max="1.0" step="0.1" v-model.number="volume"></input>
+            <input class="slider" type="range" min="0.0" max="1.0" step="0.1" v-model.number="volume" @input="on_volume_input"></input>
         </div>
     </div>
     <div class="card">
